@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>GameGeek</title>
+  <!-- 外部樣式 -->
+  <link rel="stylesheet" href="gamegeek.css" />
+  <link rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+
+  <style>
+#slot-center {
+  position: relative;
+}
+
+
+/* 疊在 iframe 上的終端機輸出層 */
+#game-overlay {
+  position: absolute;
+  inset: 0;              /* 等同於 top:0; right:0; bottom:0; left:0; */
+  padding: 8px 10px;     /* 讓字不要貼邊 */
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  
+  color: #00ff66;
+  font-family: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+
+  pointer-events: none;  /* 任務：不要擋到 iframe */
+  z-index: 10;
+  overflow-y: auto;      /* 要不要捲動可自行決定，保留方便你看舊 log */
+}
+
+/* 新增：包住遊戲 + overlay 的容器 */
+#game-wrapper {
+  position: relative;
+  display: inline-block;  /* 寬高跟著 iframe 走 */
+}
+  
+  </style>
+
+</head>
+
+<body class="landscape">
+  <div id="shell">
+    <div id="slot-left"></div>
+
+    <div id="slot-center">
+      <div id="game-wrapper">
+        <iframe id="game" src="about:blank" frameborder="0" scrolling="no" allowfullscreen></iframe>
+          <!-- 疊在遊戲上的提示層 -->
+          <div id="game-overlay" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <div id="slot-right"></div>
+
+    <div id="slot-bottom"></div>
+  </div>
+
+<!-- LeafLune Panel（logo + D-Pad） -->
+<section id="panel-leaf" class="panel">
+  <div class="brand">
+    <img src="leaflune_emoji.png" alt="LeafLune logo">
+    <span>LeafLune</span>
+  </div>
+
+  <div class="dpad control-block">
+    <button class="gbtn" data-key="up"    style="grid-area: up;">↑</button>
+    <button class="gbtn" data-key="left"  style="grid-area: left;">←</button>
+    <button class="gbtn" data-key="right" style="grid-area: right;">→</button>
+    <button class="gbtn" data-key="down"  style="grid-area: down;">↓</button>
+  </div>
+
+  <div class="panel-foot">
+    <!-- 之後 LeafLune 這邊要放什麼小按鈕就丟這裡 -->
+    <button class="gbtn utility-btn" title="Start">▷</button>
+    <button class="gbtn utility-btn" title="Select">☰</button>
+    
+  </div>
+</section>
+
+<!-- GameGeek Panel（文字 + 1~4 + 全螢幕） -->
+<section id="panel-geek" class="panel">
+  <div class="brand">
+    <span>GameGeek</span>
+    <span aria-hidden="true">🎮</span>
+  </div>
+
+  <div class="actions control-block">
+    <button class="gbtn" data-key="btn1" style="grid-area: btn1;">1</button>
+    <button class="gbtn" data-key="btn2" style="grid-area: btn2;">2</button>
+    <button class="gbtn" data-key="btn3" style="grid-area: btn3;">3</button>
+    <button class="gbtn" data-key="btn4" style="grid-area: btn4;">4</button>
+  </div>
+
+  <div class="panel-foot">
+    <button class="gbtn utility-btn" title="Set">⚙</button>
+    <button id="fullscreen-btn" class="gbtn utility-btn" title="全螢幕">⛶</button>
+  </div>
+</section>
+
+<script src="gg_rwd.js" ></script>
+
+  <script>
+
+
+    const fsBtn   = document.getElementById('fullscreen-btn');
+    
+      const gameFrame = document.getElementById('game');   // ← 注意：是 gameFrame，不是 game
+  const overlay = document.getElementById('game-overlay');
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        const el = document.documentElement;
+        if (el.requestFullscreen) el.requestFullscreen();
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      }
+    }
+
+    fsBtn.addEventListener('click', toggleFullscreen);
+
+
+    layout();
+    
+    
+     // ====== 按鈕提示層：顯示按下 / 放開的是哪一顆 ======
+
+  const keyLabelMap = {
+    up:    '↑',
+    down:  '↓',
+    left:  '←',
+    right: '→',
+    btn1:  '1',
+    btn2:  '2',
+    btn3:  '3',
+    btn4:  '4',
+    start: 'Start',
+    select:'Select'
+  };
+
+// 給 log 用的時間戳（簡單版）
+  function nowStamp() {
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    const ms = String(d.getMilliseconds()).padStart(3, '0');
+    return `${hh}:${mm}:${ss}.${ms}`;
+  }
+
+  // 在 overlay 裡加一行 log
+  function logOverlay(text) {
+    if (!overlay) return;
+    const line = document.createElement('div');
+    line.textContent = `[${nowStamp()}] ${text}`;
+    overlay.appendChild(line);
+    // 自動捲到最下面
+    overlay.scrollTop = overlay.scrollHeight;
+  }
+
+  // 綁定所有 data-key 按鈕
+  const padButtons = document.querySelectorAll('button[data-key]');
+
+  padButtons.forEach(btn => {
+    const key   = btn.dataset.key;
+    const label = keyLabelMap[key] || key;
+
+    // 按下
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (btn.setPointerCapture) {
+        btn.setPointerCapture(e.pointerId);
+      }
+      logOverlay(`keydown  ${label}`);
+    });
+
+    // 放開 / 取消 / 滑出去
+    const end = (e) => {
+      e.preventDefault();
+      try {
+        if (btn.releasePointerCapture) {
+          btn.releasePointerCapture(e.pointerId);
+        }
+      } catch (err) {}
+      logOverlay(`keyup    ${label}`);
+    };
+
+    btn.addEventListener('pointerup', end);
+    btn.addEventListener('pointercancel', end);
+    // btn.addEventListener('pointerleave', end);
+  });
+
+  // 之後要對 iframe 傳 postMessage，就在 pointerdown/up 這裡順便加：
+  // gameFrame.contentWindow.postMessage({ ... }, '*');
+  </script>
+</body>
+</html>
+        

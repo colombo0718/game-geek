@@ -1,0 +1,199 @@
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f0f0f0;
+}
+
+/* ===== 主容器佈局 ===== */
+#shell {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+}
+
+/* 橫向佈局 */
+body.landscape #shell {
+  flex-direction: row;
+  justify-content: center;
+  align-items: stretch;
+}
+
+/* 直向佈局 */
+body.portrait #shell {
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+}
+
+/* ===== 插槽系統 ===== */
+/* 共用插槽樣式 */
+#slot-left,
+#slot-right,
+#slot-center,
+#slot-bottom {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 8px 6px;
+}
+
+/* 特定插槽樣式 */
+#slot-left,
+#slot-right {
+  flex: 0 0 clamp(100px, 18vw, 150px);
+}
+
+#slot-center {
+  flex: 1 1 auto;
+  padding: 4px;
+  align-items: center;
+}
+
+#slot-bottom {
+  display: none;
+  padding: 4px 8px 8px;
+  gap: 8px;
+}
+
+/* 直向模式佈局調整 */
+body.portrait #slot-left,
+body.portrait #slot-right {
+  display: none;
+}
+
+body.portrait #slot-center {
+  padding: 0;
+  align-items: flex-start;
+}
+
+body.portrait #slot-bottom {
+  display: flex;
+}
+
+/* 插槽內的 panel 撐滿高度 */
+#slot-left > .panel,
+#slot-right > .panel,
+#slot-bottom > .panel {
+  flex: 1 1 auto;
+}
+
+/* ===== 遊戲畫面 ===== */
+#game {
+  background: #000;
+  border: none;
+  display: block;
+}
+
+/* ===== 面板系統 ===== */
+.panel {
+  flex: 1 1 0;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 品牌標籤 */
+.brand {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #555;
+}
+
+.brand img {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* 控制器區塊 */
+.control-block {
+  margin: auto 0;
+}
+
+/* 面板底部 */
+.panel-foot {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding-bottom: 4px;
+}
+
+/* ===== 按鈕系統 ===== */
+/* 通用按鈕 */
+button.gbtn {
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  background: #e5e5e5;
+  cursor: pointer;
+  transition: background 0s, transform 0s;
+}
+
+button.gbtn:active {
+  background: #a5a5a5;
+  transform: translateY(1px);
+}
+
+/* 控制器按鈕尺寸 */
+.dpad button,
+.actions button {
+  width: 50px;
+  height: 50px;
+}
+
+/* 功能按鈕 */
+.utility-btn {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  border-radius: 999px;
+}
+
+/* ===== 控制器佈局 ===== */
+/* 網格佈局基礎 */
+.dpad,
+.actions {
+  display: grid;
+  grid-gap: 6px;
+  justify-items: center;
+  align-items: center;
+}
+
+/* 方向鍵 */
+.dpad {
+  grid-template-areas:
+    ". up ."
+    "left center right"
+    ". down .";
+}
+
+.dpad button {
+  font-size: 20px;
+}
+
+/* 動作鍵 */
+.actions {
+  grid-template-areas:
+    ". btn1 ."
+    "btn2 center btn3"
+    ". btn4 .";
+}
+
+.actions button {
+  font-size: 24px;
+  border-radius: 999px;
+}

@@ -40,7 +40,7 @@
     #launcher {
       position: absolute;
       inset: 0;
-      background: #f0f0f0;     /* 你要的：與外面相同的底色（可依你外圈實色再調） */
+      background: #f0f0f0;
       z-index: 20;
       display: flex;
       flex-direction: column;
@@ -70,7 +70,26 @@
       padding: 0 12px;
       border-radius: 6px;
     }
-    .launcher-hint{
+
+    /* ✅ SS 主頁 iframe 容器 */
+    .launcher-body{
+      flex: 1 1 auto;
+      min-height: 0;            /* 關鍵：讓 iframe 能在 flex 裡正確縮放 */
+      border: 1px solid #cfcfcf;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #f0f0f0;
+    }
+    #ss-home{
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+      background: #f0f0f0;
+    }
+
+    /* 可留一行小提示（不想要就整段刪掉） */
+    .launcher-footnote{
       font-size: 12px;
       color: #666;
       line-height: 1.5;
@@ -89,16 +108,23 @@
       <!-- 終端機：顯示按鈕事件 -->
       <div id="terminal" aria-hidden="true"></div>
 
-      <!-- 覆蓋層：輸入網址 + 載入 -->
+      <!-- 覆蓋層：輸入網址 + 載入 + SS 主頁 -->
       <div id="launcher" class="hidden" aria-hidden="true">
         <div class="launcher-topbar">
           <input id="game-url" type="text" placeholder="貼上遊戲網址（建議含 /index.html）" />
           <button id="load-btn" class="gbtn">載入</button>
           <button id="close-btn" class="gbtn">✕</button>
         </div>
-        <div class="launcher-hint">
-          範例： https://strategy-space.vercel.app/voxel/santa-gifts/index.html<br>
-          （你已決定習慣加 /index.html；這裡也有最小防呆，沒寫會自動補）
+
+        <!-- ✅ 原 launcher-hint 改成 iframe：固定放 SS 主頁 -->
+        <div class="launcher-body">
+          <iframe id="ss-home"
+                  src="https://strategy-space.vercel.app/index.html"
+                  title="StrategySpace Home"></iframe>
+        </div>
+
+        <div class="launcher-footnote">
+          點 SS 的 Play 會把網址送回這裡，然後你再按「載入」確定進入遊戲。
         </div>
       </div>
     </div>
@@ -188,7 +214,6 @@
     return `${hh}:${mm}:${ss}.${ms}`;
   }
 
-  // 在 terminal 裡加一行 log（可選時間戳）
   function printTerminal(text, showTime = true) {
     if (!terminal) return;
     const line = document.createElement('div');
@@ -197,7 +222,6 @@
     terminal.scrollTop = terminal.scrollHeight;
   }
 
-  // 你要的簡化輸出：只顯示 id + s
   function ggEventText(player, btnID, state) {
     return `{ id:${btnID}, s:"${state}" }`;
   }
@@ -211,18 +235,15 @@
     up: 5, left: 6, down: 7, right: 8
   };
 
-  // ====== postMessage: 真的把控制訊號送給 iframe ======
   function sendGGEvent(player, btnID, state) {
     if (!gameFrame || !gameFrame.contentWindow) return;
-
-    // 真正送出去的協定：完整 gg_event
     gameFrame.contentWindow.postMessage(
             { type: "gg_event", player, btnID, state },
             "*"
     );
   }
 
-  // ====== Launcher（覆蓋式載入介面）=====
+  // ====== Launcher ======
   function showLauncher() {
     launcher.classList.remove('hidden');
     launcher.setAttribute('aria-hidden', 'false');
@@ -239,8 +260,6 @@
   function normalizeUrl(u) {
     u = (u || '').trim();
     if (!u) return '';
-
-    // 最小防呆：你少寫 /index.html 時，自動補上
     if (u.endsWith('.html')) return u;
     if (u.endsWith('/')) return u + 'index.html';
     return u + '/index.html';
@@ -267,10 +286,29 @@
     if (e.key === 'Escape') hideLauncher();
   });
 
+  // ✅ 接收 SS 主頁的選擇：只寫入網址列，不自動載入
+  const ALLOWED_SS_ORIGIN = "https://strategy-space.vercel.app";
+
+  window.addEventListener("message", (ev) => {
+    const d = ev.data;
+    if (!d || typeof d !== "object") return;
+
+    // 只接受 SS 來源（避免亂塞）
+    if (ev.origin !== ALLOWED_SS_ORIGIN) return;
+
+    if (d.type === "ss_open" && typeof d.url === "string") {
+      const u = normalizeUrl(d.url);
+      urlInput.value = u;
+
+      // 若 launcher 沒打開，幫你打開（你才看得到網址列已被填入）
+      if (launcher.classList.contains("hidden")) showLauncher();
+
+      printTerminal(`SS selected: ${u} (waiting for load)`, true);
+    }
+  });
+
   // ====== 綁定所有 data-key 按鈕：印出 + 送出 gg_event ======
   const padButtons = document.querySelectorAll('button[data-key]');
-
-  // 目前先固定 player=0，之後你做 2P 再改成可切換變數
   const currentPlayer = 0;
 
   padButtons.forEach(btn => {
@@ -281,10 +319,7 @@
       e.preventDefault();
       if (btn.setPointerCapture) btn.setPointerCapture(e.pointerId);
 
-      // 終端機顯示（你要簡化，先不顯示時間）
       printTerminal(ggEventText(currentPlayer, btnID, "down"), false);
-
-      // 真正送出
       sendGGEvent(currentPlayer, btnID, "down");
     });
 

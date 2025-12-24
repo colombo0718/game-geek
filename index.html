@@ -31,10 +31,13 @@
       font-size: 11px;
       line-height: 1.4;
 
-      pointer-events: none; /* 不擋 iframe / launcher */
+      pointer-events: none; /* 不擋 iframe / launcher / settings */
       z-index: 10;
       overflow-y: hidden;
     }
+
+    /* ✅ terminal 預設隱藏：由 develop mode 控制 */
+    #terminal.hidden { display: none !important; }
 
     /* 覆蓋式載入介面（會擋住中間正方形區域） */
     #launcher {
@@ -49,13 +52,28 @@
       pointer-events: auto;
     }
 
+    /* ✅ 覆蓋式設定介面（同 launcher 風格） */
+    #settings-panel{
+      position: absolute;
+      inset: 0;
+      background: #f0f0f0;
+      z-index: 21; /* 比 launcher 高一點，避免同時開時疊錯 */
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      gap: 12px;
+      pointer-events: auto;
+    }
+
     .hidden { display: none !important; }
 
-    .launcher-topbar{
+    .launcher-topbar,
+    .settings-topbar{
       display:flex;
       gap: 8px;
       align-items:center;
     }
+
     #game-url{
       flex: 1 1 auto;
       height: 34px;
@@ -65,7 +83,8 @@
       font-size: 14px;
       outline: none;
     }
-    #load-btn, #close-btn{
+    #load-btn, #close-btn,
+    #settings-close-btn{
       height: 34px;
       padding: 0 12px;
       border-radius: 6px;
@@ -74,7 +93,7 @@
     /* ✅ SS 主頁 iframe 容器 */
     .launcher-body{
       flex: 1 1 auto;
-      min-height: 0;            /* 關鍵：讓 iframe 能在 flex 裡正確縮放 */
+      min-height: 0;            /* 讓 iframe 能在 flex 裡正確縮放 */
       border: 1px solid #cfcfcf;
       border-radius: 10px;
       overflow: hidden;
@@ -88,11 +107,31 @@
       background: #f0f0f0;
     }
 
-    /* 可留一行小提示（不想要就整段刪掉） */
-    .launcher-footnote{
+    /* launcher/設定面板底部提示 */
+    .launcher-footnote,
+    .settings-footnote{
       font-size: 12px;
       color: #666;
       line-height: 1.5;
+    }
+
+    /* ✅ Settings 內容區 */
+    .settings-body{
+      background: #ffffff;
+      border: 1px solid #cfcfcf;
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .settings-row{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      font-size: 14px;
+      color: #222;
+    }
+    .settings-row input[type="checkbox"]{
+      width: 18px;
+      height: 18px;
     }
   </style>
 </head>
@@ -105,8 +144,8 @@
     <div id="game-wrapper">
       <iframe id="game" src="about:blank" frameborder="0" scrolling="no" allowfullscreen></iframe>
 
-      <!-- 終端機：顯示按鈕事件 -->
-      <div id="terminal" aria-hidden="true"></div>
+      <!-- 終端機：顯示按鈕事件（預設隱藏） -->
+      <div id="terminal" class="hidden" aria-hidden="true"></div>
 
       <!-- 覆蓋層：輸入網址 + 載入 + SS 主頁 -->
       <div id="launcher" class="hidden" aria-hidden="true">
@@ -127,6 +166,26 @@
           點 SS 的 Play 會把網址送回這裡，然後你再按「載入」確定進入遊戲。
         </div>
       </div>
+
+      <!-- ✅ 覆蓋層：Settings -->
+      <div id="settings-panel" class="hidden" aria-hidden="true">
+        <div class="settings-topbar">
+          <div style="flex:1 1 auto; font-weight:700; color:#333;">Settings</div>
+          <button id="settings-close-btn" class="gbtn">✕</button>
+        </div>
+
+        <div class="settings-body">
+          <label class="settings-row">
+            <input id="dev-toggle" type="checkbox" />
+            <span>Develop mode（顯示 terminal）</span>
+          </label>
+        </div>
+
+        <div class="settings-footnote">
+          勾選後才會顯示綠色 terminal。之後更多 GG 設定項會加在這裡。
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -150,7 +209,7 @@
 
   <div class="panel-foot">
     <button class="gbtn utility-btn" title="Start">▷</button>
-    <!-- 這顆用來打開覆蓋層 -->
+    <!-- 這顆用來打開覆蓋層（SS launcher） -->
     <button id="menu-btn" class="gbtn utility-btn" title="Select">☰</button>
   </div>
 </section>
@@ -170,7 +229,8 @@
   </div>
 
   <div class="panel-foot">
-    <button class="gbtn utility-btn" title="Set">⚙</button>
+    <!-- ✅ 改成有 id：用來打開 settings -->
+    <button id="settings-btn" class="gbtn utility-btn" title="Set">⚙</button>
     <button id="fullscreen-btn" class="gbtn utility-btn" title="全螢幕">⛶</button>
   </div>
 </section>
@@ -178,8 +238,9 @@
 <script src="gg_rwd.js"></script>
 
 <script>
-  const fsBtn     = document.getElementById('fullscreen-btn');
-  const menuBtn   = document.getElementById('menu-btn');
+  const fsBtn       = document.getElementById('fullscreen-btn');
+  const menuBtn     = document.getElementById('menu-btn');
+  const settingsBtn = document.getElementById('settings-btn');
 
   const gameFrame = document.getElementById('game');
   const terminal  = document.getElementById('terminal');
@@ -188,6 +249,10 @@
   const urlInput  = document.getElementById('game-url');
   const loadBtn   = document.getElementById('load-btn');
   const closeBtn  = document.getElementById('close-btn');
+
+  const settingsPanel = document.getElementById('settings-panel');
+  const settingsClose = document.getElementById('settings-close-btn');
+  const devToggle     = document.getElementById('dev-toggle');
 
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
@@ -204,7 +269,6 @@
   layout(); // 你原本的 responsive/置中 sizing 邏輯
 
   // ====== Terminal ======
-
   function nowStamp() {
     const d = new Date();
     const hh = String(d.getHours()).padStart(2, '0');
@@ -215,6 +279,8 @@
   }
 
   function printTerminal(text, showTime = true) {
+    // ✅ 若 terminal 隱藏，仍可保留 log（只是不顯示）
+    // 若你想完全不記錄，可改成：if (terminal.classList.contains('hidden')) return;
     if (!terminal) return;
     const line = document.createElement('div');
     line.textContent = showTime ? `[${nowStamp()}] ${text}` : `${text}`;
@@ -245,6 +311,9 @@
 
   // ====== Launcher ======
   function showLauncher() {
+    // 互斥：開 launcher 就關 settings
+    hideSettings();
+
     launcher.classList.remove('hidden');
     launcher.setAttribute('aria-hidden', 'false');
     // 預填目前 src（方便你改）
@@ -271,6 +340,8 @@
     gameFrame.src = u;
     hideLauncher();
     printTerminal(`loaded: ${u}`, true);
+    // 載入遊戲後：依 develop mode 決定 terminal 是否顯示
+    setDevelopMode(devToggle.checked, false);
   }
 
   menuBtn.addEventListener('click', () => {
@@ -305,6 +376,44 @@
 
       printTerminal(`SS selected: ${u} (waiting for load)`, true);
     }
+  });
+
+  // ====== Settings (Develop Mode) ======
+  function showSettings(){
+    // 互斥：開 settings 就關 launcher
+    hideLauncher();
+
+    settingsPanel.classList.remove('hidden');
+    settingsPanel.setAttribute('aria-hidden', 'false');
+  }
+  function hideSettings(){
+    settingsPanel.classList.add('hidden');
+    settingsPanel.setAttribute('aria-hidden', 'true');
+  }
+
+  function setDevelopMode(on, save = true){
+    if (on) terminal.classList.remove('hidden');
+    else terminal.classList.add('hidden');
+
+    if (save) localStorage.setItem('gg_develop_mode', on ? '1' : '0');
+  }
+
+  // 初始：讀 localStorage（預設關）
+  (function initDevelopMode(){
+    const saved = localStorage.getItem('gg_develop_mode');
+    const on = saved === '1';
+    devToggle.checked = on;
+    setDevelopMode(on, false);
+  })();
+
+  settingsBtn.addEventListener('click', () => {
+    if (settingsPanel.classList.contains('hidden')) showSettings();
+    else hideSettings();
+  });
+  settingsClose.addEventListener('click', hideSettings);
+
+  devToggle.addEventListener('change', () => {
+    setDevelopMode(devToggle.checked, true);
   });
 
   // ====== 綁定所有 data-key 按鈕：印出 + 送出 gg_event ======

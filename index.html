@@ -255,80 +255,39 @@
   const devToggle     = document.getElementById('dev-toggle');
 
   // ==============================
-  // ✅ Hash 指定載入遊戲（v1）
-  // 用法：
-  //   https://game-geek.../#https://strategy-space.../emoji/slot.html
-  // 建議 encode：
-  //   #https%3A%2F%2Fstrategy-space...%2Femoji%2Fslot.html
+  // ✅ 支援 ?game=<game_url>
+  // 例：
+  //   /?game=https%3A%2F%2Fstrategy-space.vercel.app%2Femoji%2Fslot.html
   // ==============================
 
-  // 1) 預設遊戲（當網址沒有 hash 時，用這個）
-  const DEFAULT_GAME_URL = gameFrame.src; // 直接沿用你 iframe 目前的預設 src
+  const DEFAULT_GAME_URL = gameFrame.src; // 沒帶 ?game 時維持原本 iframe src
 
-  // 2)（可選）白名單，避免 GG 被拿去嵌入奇怪網站
-  const USE_ALLOWLIST = true;
-  const ALLOWLIST = [
-    "strategy-space.vercel.app",
-    "game-geek-kappa.vercel.app",
-  ];
+  function getGameFromQuery() {
+    const qs = new URLSearchParams(window.location.search);
+    let raw = qs.get('game');
+    if (!raw) return '';
 
-  function parseHashToUrl() {
-    const raw = (location.hash || "").replace(/^#/, "").trim();
-    if (!raw) return "";
+    // 支援已 encode / 未 encode
+    try { raw = decodeURIComponent(raw); } catch (e) {}
 
-    // 同時支援未 encode / 已 encode
-    try { return decodeURIComponent(raw); }
-    catch { return raw; }
+    return raw.trim();
   }
 
-  function isUrlAllowed(u) {
-    let url;
-    try { url = new URL(u); } catch { return false; }
+  function bootLoadGameFromQuery() {
+    const q = getGameFromQuery();
+    if (!q) return; // 沒帶 game 參數就不動
 
-    // 只允許 https（LIFF/安全性也比較好）
-    if (url.protocol !== "https:") return false;
+    const u = normalizeUrl(q);
+    if (!u) return;
 
-    if (USE_ALLOWLIST) {
-      return ALLOWLIST.includes(url.host);
-    }
-    return true;
+    gameFrame.src = u;
+
+    // 讓 launcher 預填也一致（可選但很順）
+    urlInput.value = u;
+
+    printTerminal(`loaded(query): ${u}`, true);
+    setDevelopMode(devToggle.checked, false);
   }
-
-  // ✅ 讓 hash 永遠用 encode 版本（更耐 LINE/LIFF）
-  function setHashFromUrl(u) {
-    const encoded = encodeURIComponent(u);
-    if (location.hash.replace(/^#/, "") !== encoded) {
-      location.hash = encoded;
-    }
-  }
-
-  // ✅ 依 hash 載入遊戲（hash 不合法就回預設）
-  function loadGameFromHash() {
-    const target = parseHashToUrl();
-
-    // 沒 hash：不動作（維持預設 src）
-    if (!target) return;
-
-    const u = normalizeUrl(target);
-
-    if (!isUrlAllowed(u)) {
-      console.warn("[GG] Blocked hash url:", u);
-
-      // 回預設，並把 hash 修正成預設（避免一直卡住）
-      gameFrame.src = DEFAULT_GAME_URL;
-      setHashFromUrl(DEFAULT_GAME_URL);
-      return;
-    }
-
-    if (gameFrame.src !== u) {
-      gameFrame.src = u;
-      printTerminal(`loaded(hash): ${u}`, true);
-
-      // 載入遊戲後：依 develop mode 決定 terminal 是否顯示
-      setDevelopMode(devToggle.checked, false);
-    }
-  }
-
 
 
   function toggleFullscreen() {
@@ -345,9 +304,7 @@
 
   layout(); // 你原本的 responsive/置中 sizing 邏輯
 
-  // ✅ 進頁面先依 hash 載入一次，並監聽 hash 變更
-  loadGameFromHash();
-  window.addEventListener("hashchange", loadGameFromHash);
+   bootLoadGameFromQuery();
 
   // ====== Terminal ======
   function nowStamp() {
@@ -419,16 +376,15 @@
     const u = normalizeUrl(urlInput.value);
     if (!u) return;
 
-    // ✅ 先更新 hash（產生可分享/可塞 LIFF 的連結）
-    setHashFromUrl(u);
-
-    // ✅ 再載入 iframe（hashchange 也會觸發，但這裡直接設一次最直覺）
     gameFrame.src = u;
+
+    // ✅（可選）同步到網址列，方便分享 / 塞 LIFF Endpoint
+    const encoded = encodeURIComponent(u);
+    const newUrl = `${location.pathname}?game=${encoded}`;
+    history.replaceState(null, "", newUrl);
 
     hideLauncher();
     printTerminal(`loaded: ${u}`, true);
-
-    // 載入遊戲後：依 develop mode 決定 terminal 是否顯示
     setDevelopMode(devToggle.checked, false);
   }
 

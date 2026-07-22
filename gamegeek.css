@@ -150,6 +150,7 @@ button.gbtn {
     inset 0 1px 0 rgba(255,255,255,.08);
   color: #e9e9e2;
   cursor: pointer;
+  touch-action: none; /* 防止瀏覽器手勢偵測干擾多點觸控同時按（搖桿+按鈕、多顆按鈕） */
   transition: transform .05s ease, box-shadow .05s ease;
 }
 

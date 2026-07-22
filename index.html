@@ -469,7 +469,8 @@
 
     btn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
-      if (btn.setPointerCapture) btn.setPointerCapture(e.pointerId);
+      // setPointerCapture 失敗不該擋住事件送出(多指同時按時較容易踩到邊界情況)
+      try { if (btn.setPointerCapture) btn.setPointerCapture(e.pointerId); } catch (err) {}
 
       printTerminal(ggEventText(currentPlayer, btnID, "down"), false);
       sendGGEvent(currentPlayer, btnID, "down");
@@ -562,7 +563,7 @@
     base.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       knob.classList.add('active');
-      base.setPointerCapture(e.pointerId);
+      try { base.setPointerCapture(e.pointerId); } catch (err) {}
       updateFromPointer(e.clientX, e.clientY);
     });
     base.addEventListener('pointermove', (e) => {

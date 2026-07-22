@@ -43,7 +43,10 @@ function layout() {
     size = Math.min(rect.width, rect.height);
   } else {
     // 直版：上半部 = 正方形遊戲區；下半部 = panel
-    // ★ 控制器面板只佔自己內容實際需要的高度，不撐滿剩餘空間(修死白留白 bug)
+    // bottomH 量測用「內容自然高度」(不含 flex:1 撐開的量)，讓遊戲畫面盡量大；
+    // 但 slot-bottom 本身仍撐滿剩餘空間 —— 面板內部用 .control-block(貼上緣，靠近遊戲)
+    // 跟 .panel-foot(margin-top:auto，貼下緣) 分工，剩餘空間變成兩者之間刻意的安全間距，
+    // 不是死白留白(死白留白 bug 是「主控制器本身被推到面板正中間」，已在 CSS 修掉)。
     bottom.style.flex = '';
     const bottomH = bottom.offsetHeight || 0;
     const maxW = w;
@@ -52,7 +55,7 @@ function layout() {
 
     center.style.height = size + 'px';
     center.style.flex   = '0 0 ' + size + 'px';
-    bottom.style.flex   = '0 0 auto';
+    bottom.style.flex   = '1 1 auto';
   }
 
   game.style.width  = size + 'px';

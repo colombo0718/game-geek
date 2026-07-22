@@ -43,6 +43,8 @@ function layout() {
     size = Math.min(rect.width, rect.height);
   } else {
     // 直版：上半部 = 正方形遊戲區；下半部 = panel
+    // ★ 控制器面板只佔自己內容實際需要的高度，不撐滿剩餘空間(修死白留白 bug)
+    bottom.style.flex = '';
     const bottomH = bottom.offsetHeight || 0;
     const maxW = w;
     const maxH = h - bottomH;
@@ -50,7 +52,7 @@ function layout() {
 
     center.style.height = size + 'px';
     center.style.flex   = '0 0 ' + size + 'px';
-    bottom.style.flex   = '1 1 auto';
+    bottom.style.flex   = '0 0 auto';
   }
 
   game.style.width  = size + 'px';

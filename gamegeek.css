@@ -10,7 +10,8 @@ html, body {
   height: 100%;
   overflow: hidden;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #f0f0f0;
+  /* 深色機殼底、淡淡葉綠暈染，桌面版兩側留白也有氛圍不是純空白 */
+  background: radial-gradient(ellipse at 50% 28%, #262b24 0%, #16180f 68%, #0e0f0b 100%);
 }
 
 /* ===== 主容器佈局 ===== */
@@ -91,6 +92,8 @@ body.portrait #slot-bottom {
   background: #000;
   border: none;
   display: block;
+  border-radius: 6px;
+  box-shadow: 0 0 0 3px #0e0f0b, 0 0 24px rgba(0,0,0,.6), 0 0 40px rgba(111,174,122,.06);
 }
 
 /* ===== 面板系統 ===== */
@@ -104,25 +107,27 @@ body.portrait #slot-bottom {
 
 /* 品牌標籤 */
 .brand {
-  margin-top: 4px;
+  margin-top: 6px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: #555;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #cfd6c9;
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
 }
 
 .brand img {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   display: block;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.5));
 }
 
-/* 控制器區塊 */
+/* 控制器區塊：靠近品牌列、不再用 auto margin 被撐到面板正中間 */
 .control-block {
-  margin: auto 0;
+  margin: 18px 0 0;
 }
 
 /* 面板底部 */
@@ -131,21 +136,29 @@ body.portrait #slot-bottom {
   justify-content: center;
   gap: 6px;
   padding-bottom: 4px;
+  margin-top: auto;
 }
 
-/* ===== 按鈕系統 ===== */
-/* 通用按鈕 */
+/* ===== 按鈕系統（機殼按鍵質感：外凸、按下內凹） ===== */
 button.gbtn {
-  border: 1px solid #bbb;
-  border-radius: 4px;
-  background: #e5e5e5;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(155deg, #3a3f39, #24271f);
+  box-shadow:
+    0 3px 0 #101209,
+    0 5px 10px rgba(0,0,0,.5),
+    inset 0 1px 0 rgba(255,255,255,.08);
+  color: #e9e9e2;
   cursor: pointer;
-  transition: background 0s, transform 0s;
+  transition: transform .05s ease, box-shadow .05s ease;
 }
 
 button.gbtn:active {
-  background: #a5a5a5;
-  transform: translateY(1px);
+  transform: translateY(3px);
+  box-shadow:
+    0 0 0 #101209,
+    inset 0 3px 6px rgba(0,0,0,.55);
+  background: linear-gradient(155deg, #24271f, #3a3f39);
 }
 
 /* 控制器按鈕尺寸 */
@@ -155,12 +168,13 @@ button.gbtn:active {
   height: 50px;
 }
 
-/* 功能按鈕 */
+/* 功能按鈕（Start/Select/設定/全螢幕） */
 .utility-btn {
   width: 32px;
   height: 32px;
-  font-size: 16px;
+  font-size: 15px;
   border-radius: 999px;
+  color: #b9c2b6;
 }
 
 /* ===== 控制器佈局 ===== */
@@ -173,7 +187,7 @@ button.gbtn:active {
   align-items: center;
 }
 
-/* 虛擬搖桿（取代原本方向鍵四顆按鈕） */
+/* 虛擬搖桿（取代原本方向鍵四顆按鈕；葉綠色調＝移動） */
 .joystick {
   width: 120px;
   height: 120px;
@@ -187,8 +201,12 @@ button.gbtn:active {
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: #e5e5e5;
-  border: 1px solid #bbb;
+  background: radial-gradient(circle at 50% 42%, #22261f, #14150f 78%);
+  box-shadow:
+    inset 0 4px 10px rgba(0,0,0,.65),
+    inset 0 -2px 5px rgba(255,255,255,.03),
+    0 1px 0 rgba(255,255,255,.04);
+  border: 1px solid #0b0c08;
   touch-action: none; /* 拖動時禁止頁面滾動 */
   cursor: pointer;
 }
@@ -198,20 +216,28 @@ button.gbtn:active {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: #a5a5a5;
-  border: 1px solid #888;
+  background: radial-gradient(circle at 35% 30%, #4c554a, #262a22 72%);
+  border: 2px solid #6fae7a;
+  box-shadow:
+    0 3px 6px rgba(0,0,0,.55),
+    inset 0 1px 2px rgba(255,255,255,.15),
+    0 0 10px rgba(111,174,122,.25);
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  transition: transform 0.05s linear, background 0s;
+  transition: transform 0.05s linear, box-shadow .1s ease, border-color .1s ease;
   pointer-events: none; /* 事件都由外層 base 接收，knob 只負責顯示 */
 }
 
 .joystick-knob.active {
-  background: #7a7a7a;
+  border-color: #e7c873;
+  box-shadow:
+    0 2px 4px rgba(0,0,0,.5),
+    inset 0 1px 2px rgba(255,255,255,.2),
+    0 0 16px rgba(231,200,115,.55);
 }
 
-/* 動作鍵 */
+/* 動作鍵（1~4；月金色調＝行動） */
 .actions {
   grid-template-areas:
     ". btn1 ."
@@ -220,6 +246,17 @@ button.gbtn:active {
 }
 
 .actions button {
-  font-size: 24px;
+  font-size: 22px;
+  font-weight: 700;
   border-radius: 999px;
+  color: #f3e6b8;
+  border: 1px solid rgba(231,200,115,.18);
+}
+
+.actions button:active {
+  color: #e7c873;
+  box-shadow:
+    0 0 0 #101209,
+    inset 0 3px 6px rgba(0,0,0,.55),
+    0 0 12px rgba(231,200,115,.35);
 }

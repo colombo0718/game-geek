@@ -494,15 +494,12 @@
     if (!base || !knob) return;
 
     const DIR_BTN = { up: 5, left: 6, down: 7, right: 8 };
+    // 維持 4 方向、不做斜角組合鍵（每個扇區 90 度，取最近的單一方向）
     const SECTORS = [
       { angle: 0,    dirs: ['right'] },
-      { angle: 45,   dirs: ['up', 'right'] },
       { angle: 90,   dirs: ['up'] },
-      { angle: 135,  dirs: ['up', 'left'] },
       { angle: 180,  dirs: ['left'] },
-      { angle: -135, dirs: ['down', 'left'] },
       { angle: -90,  dirs: ['down'] },
-      { angle: -45,  dirs: ['down', 'right'] },
     ];
     const DEADZONE_RATIO = 0.25; // 位移小於半徑 25% 視為回中，不觸發方向
 

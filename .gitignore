@@ -1,0 +1,5 @@
+.idea/
+*.zip
+game-geek/
+node_modules/
+.wrangler/

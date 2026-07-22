@@ -154,7 +154,9 @@ button.gbtn {
   transition: transform .05s ease, box-shadow .05s ease;
 }
 
-button.gbtn:active {
+/* 用 JS 明確切換 .pressed，不依賴瀏覽器 :active(多點觸控+其他元素setPointerCapture時常不可靠) */
+button.gbtn:active,
+button.gbtn.pressed {
   transform: translateY(3px);
   box-shadow:
     0 0 0 #101209,
@@ -254,7 +256,8 @@ button.gbtn:active {
   border: 1px solid rgba(231,200,115,.18);
 }
 
-.actions button:active {
+.actions button:active,
+.actions button.pressed {
   color: #e7c873;
   box-shadow:
     0 0 0 #101209,

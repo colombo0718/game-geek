@@ -471,6 +471,7 @@
       e.preventDefault();
       // setPointerCapture 失敗不該擋住事件送出(多指同時按時較容易踩到邊界情況)
       try { if (btn.setPointerCapture) btn.setPointerCapture(e.pointerId); } catch (err) {}
+      btn.classList.add('pressed'); // 手動控制按下視覺，不依賴瀏覽器 :active(多點觸控時不可靠)
 
       printTerminal(ggEventText(currentPlayer, btnID, "down"), false);
       sendGGEvent(currentPlayer, btnID, "down");
@@ -479,6 +480,7 @@
     const end = (e) => {
       e.preventDefault();
       try { if (btn.releasePointerCapture) btn.releasePointerCapture(e.pointerId); } catch (err) {}
+      btn.classList.remove('pressed');
 
       printTerminal(ggEventText(currentPlayer, btnID, "up"), false);
       sendGGEvent(currentPlayer, btnID, "up");

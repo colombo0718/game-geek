@@ -173,16 +173,42 @@ button.gbtn:active {
   align-items: center;
 }
 
-/* 方向鍵 */
-.dpad {
-  grid-template-areas:
-    ". up ."
-    "left center right"
-    ". down .";
+/* 虛擬搖桿（取代原本方向鍵四顆按鈕） */
+.joystick {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.dpad button {
-  font-size: 20px;
+.joystick-base {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: #e5e5e5;
+  border: 1px solid #bbb;
+  touch-action: none; /* 拖動時禁止頁面滾動 */
+  cursor: pointer;
+}
+
+.joystick-knob {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #a5a5a5;
+  border: 1px solid #888;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  transition: transform 0.05s linear, background 0s;
+  pointer-events: none; /* 事件都由外層 base 接收，knob 只負責顯示 */
+}
+
+.joystick-knob.active {
+  background: #7a7a7a;
 }
 
 /* 動作鍵 */

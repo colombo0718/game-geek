@@ -200,11 +200,10 @@
     <span>LeafLune</span>
   </div>
 
-  <div class="dpad control-block">
-    <button class="gbtn" data-key="up"    style="grid-area: up;">↑</button>
-    <button class="gbtn" data-key="left"  style="grid-area: left;">←</button>
-    <button class="gbtn" data-key="right" style="grid-area: right;">→</button>
-    <button class="gbtn" data-key="down"  style="grid-area: down;">↓</button>
+  <div class="joystick control-block" id="joystick">
+    <div class="joystick-base" id="joystick-base">
+      <div class="joystick-knob" id="joystick-knob"></div>
+    </div>
   </div>
 
   <div class="panel-foot">
@@ -487,6 +486,96 @@
     btn.addEventListener('pointerup', end);
     btn.addEventListener('pointercancel', end);
   });
+
+  // ====== 虛擬搖桿（取代原本4顆方向鍵；輸出仍是離散 gg_event，8方向量化+死區，協定不變） ======
+  (function () {
+    const base = document.getElementById('joystick-base');
+    const knob = document.getElementById('joystick-knob');
+    if (!base || !knob) return;
+
+    const DIR_BTN = { up: 5, left: 6, down: 7, right: 8 };
+    const SECTORS = [
+      { angle: 0,    dirs: ['right'] },
+      { angle: 45,   dirs: ['up', 'right'] },
+      { angle: 90,   dirs: ['up'] },
+      { angle: 135,  dirs: ['up', 'left'] },
+      { angle: 180,  dirs: ['left'] },
+      { angle: -135, dirs: ['down', 'left'] },
+      { angle: -90,  dirs: ['down'] },
+      { angle: -45,  dirs: ['down', 'right'] },
+    ];
+    const DEADZONE_RATIO = 0.25; // 位移小於半徑 25% 視為回中，不觸發方向
+
+    let active = new Set(); // 目前按住的方向名稱
+
+    function applyActive(newActive) {
+      for (const d of active) {
+        if (!newActive.has(d)) {
+          printTerminal(ggEventText(currentPlayer, DIR_BTN[d], "up"), false);
+          sendGGEvent(currentPlayer, DIR_BTN[d], "up");
+        }
+      }
+      for (const d of newActive) {
+        if (!active.has(d)) {
+          printTerminal(ggEventText(currentPlayer, DIR_BTN[d], "down"), false);
+          sendGGEvent(currentPlayer, DIR_BTN[d], "down");
+        }
+      }
+      active = newActive;
+    }
+
+    function nearestSector(deg) {
+      let best = SECTORS[0], bestDiff = Infinity;
+      for (const s of SECTORS) {
+        const diff = Math.abs(((deg - s.angle + 540) % 360) - 180);
+        if (diff < bestDiff) { bestDiff = diff; best = s; }
+      }
+      return best;
+    }
+
+    function updateFromPointer(clientX, clientY) {
+      const rect = base.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = clientX - cx;
+      const dy = clientY - cy;
+      const dist = Math.hypot(dx, dy);
+      const radius = rect.width / 2;
+      const maxKnobOffset = radius - 26; // 26 ≈ knob半徑，避免視覺溢出base
+
+      if (dist < radius * DEADZONE_RATIO) {
+        knob.style.transform = `translate(-50%, -50%)`;
+        applyActive(new Set());
+        return;
+      }
+      const clamped = Math.min(dist, maxKnobOffset);
+      const ux = dx / dist, uy = dy / dist;
+      knob.style.transform = `translate(calc(-50% + ${ux * clamped}px), calc(-50% + ${uy * clamped}px))`;
+
+      const deg = Math.atan2(-dy, dx) * 180 / Math.PI; // 數學角度、上=+90
+      applyActive(new Set(nearestSector(deg).dirs));
+    }
+
+    function end() {
+      knob.classList.remove('active');
+      knob.style.transform = `translate(-50%, -50%)`;
+      applyActive(new Set());
+    }
+
+    base.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      knob.classList.add('active');
+      base.setPointerCapture(e.pointerId);
+      updateFromPointer(e.clientX, e.clientY);
+    });
+    base.addEventListener('pointermove', (e) => {
+      e.preventDefault();
+      updateFromPointer(e.clientX, e.clientY);
+    });
+    base.addEventListener('pointerup', end);
+    base.addEventListener('pointercancel', end);
+    window.addEventListener('blur', end);
+  })();
 </script>
 </body>
 </html>

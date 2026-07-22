@@ -72,50 +72,30 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) ggAll
 
 ---
 
-## 三、範例：貓咪排球（`cat_volley_en.html`）怎麼接
+## 三、把 btnID 接到你遊戲既有的輸入變數上
 
-**現況**：橘貓（畫面右側）是玩家控制，黑貓/賓士貓是 AI。現有輸入是這樣接的：
-
-```js
-const inputLeft     = () => mobileLeft     || !!(keys['ArrowLeft']  || keys['a'] || keys['A']);
-const inputRight    = () => mobileRight    || !!(keys['ArrowRight'] || keys['d'] || keys['D']);
-const inputJumpHeld = () => mobileJumpHeld || !!(keys['ArrowUp'] || keys[' '] || keys['w'] || keys['W']);
-// 跳躍另外有 mobileJumpJust（邊緣觸發，跟 mobileJumpHeld 分開判斷，見 ~line 600）
-```
-
-`gg_event` 的 `btnID` 對照到這三個輸入最直覺的方式，是**直接改寫 `mobileLeft/mobileRight/mobileJumpHeld/mobileJumpJust`**（不用碰 `keys{}`）：
+不用重寫遊戲邏輯——找到遊戲現有的「輸入狀態」變數（不管是 `keys{}`、`inputLeft()` 這類函式、還是自訂的 flag），把 `gg_event` 的 `btnID` 對照過去即可。常見模式：
 
 ```js
-window.addEventListener("message", (ev) => {
-  const d = ev.data;
-  if (!d || d.type !== "gg_event") return;
-  const { btnID, state } = d;
-  const pressed = state === "down";
-
-  if (btnID === 0) { mobileLeft = mobileRight = mobileJumpHeld = false; return; }
-  if (btnID === 6) mobileLeft = pressed;                 // ← 左
-  if (btnID === 8) mobileRight = pressed;                // → 右
-  if (btnID === 5) {                                     // ↑ 跳
-    if (pressed && !mobileJumpHeld) mobileJumpJust = true;  // 邊緣觸發：剛按下那一刻才算一次跳
-    mobileJumpHeld = pressed;
-  }
-});
-window.addEventListener("blur", () => { mobileLeft = mobileRight = mobileJumpHeld = false; });
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) { mobileLeft = mobileRight = mobileJumpHeld = false; }
-});
+// 假設你的遊戲已經有 moveLeft / moveRight / jumpHeld / jumpJust 這類狀態
+if (btnID === 6) moveLeft  = pressed;   // ←
+if (btnID === 8) moveRight = pressed;   // →
+if (btnID === 5) {                      // ↑（若動作是「跳」，通常要分「按住」跟「剛按下那一瞬間」兩種狀態）
+  if (pressed && !jumpHeld) jumpJust = true;
+  jumpHeld = pressed;
+}
 ```
 
-`btnID 7`（下）貓排球用不到，不用處理。
+不是所有 `btnID` 都要用到——遊戲用不到的鍵（例如沒有「下」這個動作）直接不處理即可。
 
-**重要：現有的 canvas 觸控按鈕（`BTN.left/right/jump`）建議在 GG 裡隱藏或不繪製**——GG 的 D-pad 跟這組 canvas 按鈕現在同時存在、同時能動，兩套輸入疊在一起，人類玩家在同一個畫面上會看到兩組控制、容易搞混（GG 端稽核截圖已經證實這個衝突）。判斷「現在是不是在 GG 裡」最簡單的方式：
+**若遊戲原本自己畫了觸控按鈕（canvas 或 DOM），建議在 GG 裡隱藏它**——GG 的 D-pad 跟遊戲自己的觸控按鈕同時存在會讓玩家看到兩組控制、容易打架。判斷「現在是不是被嵌在別的頁面裡」最簡單的方式：
 
 ```js
-const inGG = window.self !== window.top;  // 被嵌在 iframe 裡就是 true
-if (inGG) { /* 跳過繪製 BTN.left/right/jump 那三顆 canvas 按鈕 */ }
+const embedded = window.self !== window.top;
+if (embedded) { /* 跳過繪製遊戲自己的觸控按鈕 */ }
 ```
 
-（若貓排球本身也會被嵌在其他 iframe 裡、不只 GG，更保險的做法是收到第一個 `gg_event` 才動態隱藏，而不是一開始就用 `inGG` 判斷。）
+（若遊戲也可能被嵌在 GG 以外的地方、不想一竿子打翻，更保險的做法是收到第一個 `gg_event` 才動態隱藏，而不是一開始就用 `embedded` 判斷。）
 
 ---
 
@@ -132,7 +112,7 @@ if (!GG_ORIGINS.includes(ev.origin)) return;
 
 ## 五、驗收checklist
 
-- [ ] 加上第二節的監聽器（或第三節貓排球專用版本）
+- [ ] 加上第二節的監聽器，並依第三節把 btnID 接到遊戲自己的輸入變數上
 - [ ] 在 GG（`https://game-geek.pages.dev`）裡用啟動器貼上遊戲網址載入，確認 D-pad 能動
 - [ ] 確認鍵盤操作（沒被 GG 蓋掉）跟 GG 的 D-pad 操作**都還能用**，不互相打架
 - [ ] 隱藏/移除遊戲自己畫的 canvas 觸控按鈕（若原本有）
